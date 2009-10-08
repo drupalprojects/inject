@@ -1,0 +1,108 @@
+<?php
+
+/**
+ * @file
+ * A module which injects code into a page header and footer
+ */
+
+/**
+ * Implementation of hook_help().
+ */
+function inject_help($path, $arg) {
+  switch ($path) {
+    case 'admin/help#inject':
+      return '<p>'. t('The inject module inserts your code into the pages header and footer.') .'</p>';
+    case 'admin/settings/inject':
+      $t = '<p>'. t('The settings provided here allow you to specify the code you want to inject into the page footer and header.') .'<br>';
+      $t .= '<b>'. t('Please be careful and aware that this injection can cause major problems to the site if not done correctly!') .'</b></p>';
+      return $t;
+  }
+}
+
+
+function inject_perm() {
+
+return array( 'administer inject module');
+
+} // function newmodule_perm
+
+
+
+
+/**
+ * With hook_settings() obsoleted in 5.0, we now need a menu handler
+ * for settings.
+ *
+ * @param bool $may_cache
+ * @return array
+ */
+function inject_menu() {
+  $items = array();
+  $items['admin/settings/inject'] = array(
+    'title' => 'Inject',
+    'description' => 'A module which injects code into the page header and footer.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('inject_admin_settings'),
+    'access arguments' => array('administer inject module'),
+    'type' => MENU_NORMAL_ITEM,
+  );
+  return $items;
+}
+
+
+function inject_admin_settings() {
+
+  $form['logging'] = array('#type' => 'fieldset', '#title' => t('Logging'));
+  
+  $form['logging']['inject_header_enabled'] = array(
+    '#type' => 'select', '#title' => t('Header Enabled'),
+    '#default_value' => variable_get('inject_header_enabled', 0),
+    '#options' => array('1' => t('Yes'), '0' => t('No')),
+    '#description' => t('Enables the injection of the code into the header. ')
+  );
+   $form['logging']['inject_header_code'] = array(
+    '#type' => 'textfield', '#title' => t('Header Code'),
+    '#default_value' => variable_get('inject_header_code', ''),
+    '#size' => 100, '#maxlength' => 300,
+    '#description' => t('The http code to inject into the sites header (e.g. &quot;&lt;meta name=&quot;medium&quot; content=&quot;video&quot; /&gt;&quot;)')
+  );
+ 
+   $form['logging']['inject_footer_enabled'] = array(
+    '#type' => 'select', '#title' => t('Footer Enabled'),
+    '#default_value' => variable_get('inject_footer_enabled', 0),
+    '#options' => array('1' => t('Yes'), '0' => t('No')),
+    '#description' => t('Enables the injection of the code into the footer. ')
+  );
+   
+    $form['logging']['inject_footer_code'] = array(
+    '#type' => 'textfield', '#title' => t('Footer Code'),
+    '#default_value' => variable_get('inject_footer_code', ''),
+    '#size' => 100, '#maxlength' => 300,
+    '#description' => t('The http code to inject into the sites footer, e.g. a connection to statistics collection tool.')
+  );
+    
+  return system_settings_form($form);
+}
+
+
+
+function inject_init() {
+      if (variable_get('inject_header_enabled', '0')) 
+      {
+        $ret = variable_get('inject_header_code', '');
+        drupal_set_html_head($ret);
+      }
+}
+
+
+function inject_footer() { 
+	$ret = '';
+	if (variable_get('inject_footer_enabled', '0')) {
+			
+          $ret = variable_get('inject_footer_code', '');
+		
+          return $ret;
+	}
+}
+
+

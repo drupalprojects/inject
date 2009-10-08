@@ -1,0 +1,5 @@
+name = Inject
+description = Injection of code into the page footer and header
+package = Other
+core = 6.x
+
