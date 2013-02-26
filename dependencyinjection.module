@@ -1,0 +1,54 @@
+<?php
+
+/**
+ * @file
+ * Enables Symfony's Dependency Injection Component.
+ *
+ * This code is a direct backport from Drupal 8.
+ */
+
+use Symfony\Component\DependencyInjection\ContainerBuilder;
+use Symfony\Component\DependencyInjection\ContainerInterface;
+
+/**
+ * Implements hook_boot().
+ */
+function dependencyinjection_boot() {
+  // Activates the class loader.
+  $loader = drupal_classloader();
+  $loader->registerNamespace('Symfony\Component\DependencyInjection', __DIR__ . '/vendor/symfony/dependency-injection');
+
+  // Configures the dependency injection container.
+  $container = new ContainerBuilder();
+  $container->set('class_loader', $loader);
+
+  drupal_container($container);
+}
+
+/**
+ * Retrieves the Drupal Container to standardize object construction.
+ *
+ * The container is built by the kernel and passed in to this function which
+ * stores it statically. The container always contains the services from
+ * \Drupal\Core\CoreBundle, the bundles of enabled modules and any other
+ * bundles defined in $GLOBALS['conf']['container_bundles'].
+ *
+ * @see Drupal\Core\DrupalKernel
+ *
+ * @param Symfony\Component\DependencyInjection\ContainerInterface $new_container
+ *   (optional) A new container instance to replace the current.
+ *
+ * @return Symfony\Component\DependencyInjection\ContainerInterface|bool
+ *   The instance of the ContainerInterface used to set up and maintain
+ *   object instances or FALSE if none exist yet.
+ */
+function drupal_container(ContainerInterface $new_container = NULL) {
+  // We do not use drupal_static() here because we do not have a mechanism by
+  // which to reinitialize the stored objects, so a drupal_static_reset() call
+  // would leave Drupal in a nonfunctional state.
+  static $container;
+  if (isset($new_container)) {
+    $container = $new_container;
+  }
+  return $container;
+}

@@ -1,0 +1,7 @@
+.settings
+vendor/composer
+vendor/autoload.php
+.buildpath
+.project
+composer.json
+composer.lock
