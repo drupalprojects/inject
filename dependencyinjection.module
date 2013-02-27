@@ -3,8 +3,6 @@
 /**
  * @file
  * Enables Symfony's Dependency Injection Component.
- *
- * This code is a direct backport from Drupal 8.
  */
 
 use Symfony\Component\DependencyInjection\ContainerBuilder;
@@ -12,22 +10,47 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\DependencyInjection\Dumper\PhpDumper;
 
 /**
- * Implements hook_init().
+ * Implements hook_boot().
  */
-function dependencyinjection_init() {
+function dependencyinjection_boot() {
   // Activates the class loader.
   $loader = drupal_classloader();
   $loader->registerNamespace('Symfony\Component\DependencyInjection', __DIR__ . '/vendor/symfony/dependency-injection');
 
-  $file = conf_path() . '/cache/container.php';
-  if (file_exists($file)) {
-    require_once $file;
-  }
-
-  if (class_exists('CachedContainer', FALSE)) {
-    module_invoke_all('container', drupal_container(new CachedContainer()));
+  if (variable_get('dependencyinjection_dump', FALSE)) {
+    require_once dependencyinjection_file();
+    drupal_container(new CachedContainer());
   }
   else {
+    dependencyinjection_rebuild();
+  }
+}
+
+/**
+ * Implements hook_form_system_performance_settings_alter().
+ */
+function dependencyinjection_form_system_performance_settings_alter(&$form, $form_state) {
+  $form['dependencyinjection'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Dependency Injection Container'),
+    '#description' => t('Dumping the configuration can enhance performances, by compiling, dumping and caching the resulting file to disk.')
+  );
+  $form['dependencyinjection']['dependencyinjection_dump'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Dump the configuration'),
+    '#default_value' => variable_get('dependencyinjection_dump', FALSE),
+    '#enabled' => file_exists(dependencyinjection_file()),
+  );
+
+  $form['#submit'][] = 'dependencyinjection_form_system_performance_settings_submit';
+}
+
+/**
+ * Submits dependencyinjection_form_system_performance_settings_alter() form.
+ */
+function dependencyinjection_form_system_performance_settings_submit($form, &$form_state) {
+  $form_dump = $form['dependencyinjection']['dependencyinjection_dump'];
+  if ($form_dump['#default_value'] == 0 && $form_dump['#value'] == 1) {
     dependencyinjection_rebuild();
   }
 }
@@ -38,7 +61,7 @@ function dependencyinjection_init() {
 function dependencyinjection_needs_dumping() {
   global $conf;
   // By-pass the db_merge request.
-  $conf['dependencyinjection_needs_dumping'] = TRUE;
+  $conf['dependencyinjection_needs_dumping'] = variable_get('dependencyinjection_dump', FALSE);
 }
 
 /**
@@ -49,11 +72,17 @@ function dependencyinjection_needs_dumping() {
 function dependencyinjection_rebuild() {
   // Configures the dependency injection container.
   drupal_container($container = new ContainerBuilder());
-  module_invoke_all('container_config', $container);
   module_invoke_all('container', $container);
   dependencyinjection_needs_dumping();
 }
 
+function dependencyinjection_folder() {
+  return conf_path() . '/files/cache';
+}
+
+function dependencyinjection_file() {
+  return conf_path() . '/files/cache/container.php';
+}
 /**
  * Implements hook_exit().
  */
@@ -63,8 +92,8 @@ function dependencyinjection_exit() {
     $container = drupal_container();
 
     $dumper = new PhpDumper($container);
-    file_put_contents(
-      conf_path() . '/cache/container.php',
+    $return = file_put_contents(
+      dependencyinjection_file(),
       $dumper->dump(array('class' => 'CachedContainer'))
     );
   }
@@ -72,13 +101,6 @@ function dependencyinjection_exit() {
 
 /**
  * Retrieves the Drupal Container to standardize object construction.
- *
- * The container is built by the kernel and passed in to this function which
- * stores it statically. The container always contains the services from
- * \Drupal\Core\CoreBundle, the bundles of enabled modules and any other
- * bundles defined in $GLOBALS['conf']['container_bundles'].
- *
- * @see Drupal\Core\DrupalKernel
  *
  * @param Symfony\Component\DependencyInjection\ContainerInterface $new_container
  *   (optional) A new container instance to replace the current.

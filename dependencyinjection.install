@@ -13,8 +13,8 @@ function dependencyinjection_requirements($phase) {
   // Ensure translations don't break during installation.
   $t = get_t();
 
-  $cache_path = conf_path() . '/cache';
-  $container_file = $cache_path . '/container.php';
+  $cache_path = dependencyinjection_folder();
+  $container_file = dependencyinjection_file();
   $exists = FALSE;
 
   // Verify that the directory exists.
@@ -23,8 +23,8 @@ function dependencyinjection_requirements($phase) {
     $file = $container_file;
     if (drupal_verify_install_file($container_file, FILE_EXIST)) {
       // If it does, make sure it is writable and executable.
-      $writable = drupal_verify_install_file($container_file, FILE_READABLE|FILE_WRITABLE);
-      $executable = drupal_verify_install_file($container_file, FILE_READABLE|FILE_EXECUTABLE);
+      $writable = drupal_verify_install_file($container_file, FILE_WRITABLE);
+      $executable = drupal_verify_install_file($container_file, FILE_EXECUTABLE);
       $exists = TRUE;
     }
   }
@@ -92,6 +92,11 @@ function dependencyinjection_install() {
     ->condition('type', 'module')
     ->condition('name', 'dependencyinjection')
     ->execute();
+
+  $file = dependencyinjection_file();
+  mkdir(dependencyinjection_folder(), 0300);
+  file_put_contents($file, "<?php\n");
+  chmod($file, 0300);
 }
 
 /**
@@ -108,4 +113,9 @@ function dependencyinjection_update_7000() {
     ->condition('type', 'module')
     ->condition('name', 'dependencyinjection')
     ->execute();
+
+  $file = dependencyinjection_file();
+  mkdir(dependencyinjection_folder(), 0300);
+  file_put_contents($file, "<?php\n");
+  chmod($file, 0300);
 }
