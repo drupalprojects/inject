@@ -9,20 +9,65 @@
 
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\ContainerInterface;
+use Symfony\Component\DependencyInjection\Dumper\PhpDumper;
 
 /**
- * Implements hook_boot().
+ * Implements hook_init().
  */
-function dependencyinjection_boot() {
+function dependencyinjection_init() {
   // Activates the class loader.
   $loader = drupal_classloader();
   $loader->registerNamespace('Symfony\Component\DependencyInjection', __DIR__ . '/vendor/symfony/dependency-injection');
 
-  // Configures the dependency injection container.
-  $container = new ContainerBuilder();
-  $container->set('class_loader', $loader);
+  $file = conf_path() . '/cache/container.php';
+  if (file_exists($file)) {
+    require_once $file;
+  }
 
-  drupal_container($container);
+  if (class_exists('CachedContainer', FALSE)) {
+    module_invoke_all('container', drupal_container(new CachedContainer()));
+  }
+  else {
+    dependencyinjection_rebuild();
+  }
+}
+
+/**
+ * Tells drupal to dump the container on page exit.
+ */
+function dependencyinjection_needs_dumping() {
+  global $conf;
+  // By-pass the db_merge request.
+  $conf['dependencyinjection_needs_dumping'] = TRUE;
+}
+
+/**
+ * Re-build the dependency injection container.
+ *
+ * Note: do not call this on a hook_init().
+ */
+function dependencyinjection_rebuild() {
+  // Configures the dependency injection container.
+  drupal_container($container = new ContainerBuilder());
+  module_invoke_all('container_config', $container);
+  module_invoke_all('container', $container);
+  dependencyinjection_needs_dumping();
+}
+
+/**
+ * Implements hook_exit().
+ */
+function dependencyinjection_exit() {
+  // If the container needs to be dumped.
+  if (variable_get('dependencyinjection_needs_dumping', FALSE)) {
+    $container = drupal_container();
+
+    $dumper = new PhpDumper($container);
+    file_put_contents(
+      conf_path() . '/cache/container.php',
+      $dumper->dump(array('class' => 'CachedContainer'))
+    );
+  }
 }
 
 /**

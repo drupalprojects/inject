@@ -1,0 +1,111 @@
+<?php
+
+/**
+ * @file
+ * Installation functions for Dependency Injection module.
+ */
+
+/**
+ * Implements hook_requirements().
+ */
+function dependencyinjection_requirements($phase) {
+  $requirements = array();
+  // Ensure translations don't break during installation.
+  $t = get_t();
+
+  $cache_path = conf_path() . '/cache';
+  $container_file = $cache_path . '/container.php';
+  $exists = FALSE;
+
+  // Verify that the directory exists.
+  if (drupal_verify_install_file($cache_path, FILE_EXIST, 'dir')) {
+    // Check if a container.php file already exists.
+    $file = $container_file;
+    if (drupal_verify_install_file($container_file, FILE_EXIST)) {
+      // If it does, make sure it is writable and executable.
+      $writable = drupal_verify_install_file($container_file, FILE_READABLE|FILE_WRITABLE);
+      $executable = drupal_verify_install_file($container_file, FILE_READABLE|FILE_EXECUTABLE);
+      $exists = TRUE;
+    }
+  }
+
+  // If container.php file does not exist, throw an error.
+  if (!$exists) {
+    $requirements['container file exists'] = array(
+      'title'       => $t('Container file'),
+      'value'       => $t('The container file does not exist.'),
+      'severity'    => REQUIREMENT_ERROR,
+      'description' => $t('The Dependency Injection module requires that you create a container.php file as part of the installation process. Create an empty container.php file in %cache_path that will contain dumped version of the container. This file must be writable and executable.', array('%container_file' => $container_file, '%cache_path' => $cache_path)),
+    );
+  }
+  else {
+    $requirements['container file exists'] = array(
+      'title'       => $t('Container file'),
+      'value'       => $t('The %file file exists.', array('%file' => $file)),
+    );
+    // If container.php is not writable, throw an error.
+    if (!$writable) {
+      $requirements['container file writable'] = array(
+        'title'       => $t('Container file'),
+        'value'       => $t('The container file is not writable.'),
+        'severity'    => REQUIREMENT_ERROR,
+        'description' => $t('The Dependency Injection module requires write permissions to %file during runtime. If you are unsure how to grant file permissions, consult the <a href="@handbook_url">online handbook</a>.', array('@handbook_url' => 'http://drupal.org/server-permissions')),
+      );
+    }
+    else {
+      $requirements['container file writable'] = array(
+        'title'       => $t('Container file'),
+        'value'       => $t('The container file is writable.'),
+      );
+    }
+    // If container.php is not executable, throw an error.
+    if (!$executable) {
+      $requirements['container file executable'] = array(
+        'title'       => $t('Container file'),
+        'value'       => $t('The container file is not executable.'),
+        'severity'    => REQUIREMENT_ERROR,
+        'description' => $t('The Dependency Injection module requires execute permissions to %file during runtime. If you are unsure how to grant file permissions, consult the <a href="@handbook_url">online handbook</a>.', array('@handbook_url' => 'http://drupal.org/server-permissions')),
+      );
+    }
+    else {
+      $requirements['container file executable'] = array(
+        'title'       => $t('Container file'),
+        'value'       => $t('The container file is executable.'),
+      );
+    }
+  }
+
+  return $requirements;
+}
+
+/**
+ * Implements hook_install().
+ */
+function dependencyinjection_install() {
+  db_update('system')
+    ->fields(array('weight' => -1000))
+    ->condition('type', 'module')
+    ->condition('name', 'classloader')
+    ->execute();
+  db_update('system')
+    ->fields(array('weight' => 1000))
+    ->condition('type', 'module')
+    ->condition('name', 'dependencyinjection')
+    ->execute();
+}
+
+/**
+ * Updates module weight.
+ */
+function dependencyinjection_update_7000() {
+  db_update('system')
+    ->fields(array('weight' => -1000))
+    ->condition('type', 'module')
+    ->condition('name', 'classloader')
+    ->execute();
+  db_update('system')
+    ->fields(array('weight' => 1000))
+    ->condition('type', 'module')
+    ->condition('name', 'dependencyinjection')
+    ->execute();
+}

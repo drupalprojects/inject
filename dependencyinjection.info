@@ -2,7 +2,7 @@ name = Dependency Injection
 description = Enables Symfony's Dependency Injection Component.
 core = 7.x
 php = 5.3.3
-; Load this module after classloader.
-weight = -999
+; Load this module after everything.
+weight = 1000
 
 dependencies[] = classloader
