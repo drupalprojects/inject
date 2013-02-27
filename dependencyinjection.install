@@ -93,10 +93,8 @@ function dependencyinjection_install() {
     ->condition('name', 'dependencyinjection')
     ->execute();
 
-  $file = dependencyinjection_file();
   mkdir(dependencyinjection_folder(), 0300);
-  file_put_contents($file, "<?php\n");
-  chmod($file, 0300);
+  dependencyinjection_rebuild();
 }
 
 /**
@@ -114,8 +112,17 @@ function dependencyinjection_update_7000() {
     ->condition('name', 'dependencyinjection')
     ->execute();
 
-  $file = dependencyinjection_file();
-  mkdir(dependencyinjection_folder(), 0300);
+  $file = conf_path() . '/files/cache/container.php';
+  mkdir(conf_path() . '/files/cache', 0300);
   file_put_contents($file, "<?php\n");
   chmod($file, 0300);
+}
+
+/**
+ * Rebuild the container.
+ */
+function dependencyinjection_update_7001() {
+  rmdir(conf_path() . '/files/cache');
+  mkdir(conf_path() . '/files/inject', 0300);
+  dependencyinjection_rebuild();
 }

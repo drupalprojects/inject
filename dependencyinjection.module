@@ -17,11 +17,17 @@ function dependencyinjection_boot() {
   $loader = drupal_classloader();
   $loader->registerNamespace('Symfony\Component\DependencyInjection', __DIR__ . '/vendor/symfony/dependency-injection');
 
-  if (variable_get('dependencyinjection_dump', FALSE)) {
+  if (variable_get('dependencyinjection_dump', TRUE)) {
+    // This is the last module (weight=1000) to be booted, load the cached
+    // version of the container in order to allow hook_init() to alleviate
+    // dependency injection.
     require_once dependencyinjection_file();
     drupal_container(new CachedContainer());
   }
   else {
+    // The cached version of the container does not exist, trigger a rebuild.
+    // Note: this operation is expensive and configuration should be dumped in
+    // production sites.
     dependencyinjection_rebuild();
   }
 }
@@ -38,7 +44,7 @@ function dependencyinjection_form_system_performance_settings_alter(&$form, $for
   $form['dependencyinjection']['dependencyinjection_dump'] = array(
     '#type' => 'checkbox',
     '#title' => t('Dump the configuration'),
-    '#default_value' => variable_get('dependencyinjection_dump', FALSE),
+    '#default_value' => variable_get('dependencyinjection_dump', TRUE),
     '#enabled' => file_exists(dependencyinjection_file()),
   );
 
@@ -75,11 +81,11 @@ function dependencyinjection_rebuild() {
 }
 
 function dependencyinjection_folder() {
-  return conf_path() . '/files/cache';
+  return conf_path() . '/files/inject';
 }
 
 function dependencyinjection_file() {
-  return conf_path() . '/files/cache/container.php';
+  return conf_path() . '/files/inject/container.php';
 }
 /**
  * Implements hook_exit().
@@ -90,11 +96,19 @@ function dependencyinjection_exit() {
     $container = drupal_container();
 
     $dumper = new PhpDumper($container);
-    $return = file_put_contents(
+    file_put_contents(
       dependencyinjection_file(),
       $dumper->dump(array('class' => 'CachedContainer'))
     );
   }
+}
+
+/**
+ * Implements hook_flush_caches().
+ */
+function dependencyinjection_flush_caches() {
+  dependencyinjection_rebuild();
+  return array();
 }
 
 /**
