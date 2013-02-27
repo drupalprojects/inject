@@ -66,8 +66,6 @@ function dependencyinjection_needs_dumping() {
 
 /**
  * Re-build the dependency injection container.
- *
- * Note: do not call this on a hook_init().
  */
 function dependencyinjection_rebuild() {
   // Configures the dependency injection container.
