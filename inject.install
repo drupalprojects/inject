@@ -16,7 +16,7 @@ function inject_requirements($phase) {
   // Ensure translations don't break during installation.
   $t = get_t();
 
-  if ($phase != 'install' && variable_gel('inject_dump', TRUE)) {
+  if ($phase != 'install' && variable_get('inject_dump', TRUE)) {
     $cache_path = conf_path() . '/files/inject';
     $container_file = $cache_path . '/container.php';
     $exists = FALSE;
