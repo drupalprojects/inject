@@ -98,22 +98,22 @@ function inject_rebuild($phase = 'runtime', ContainerInterface $container = NULL
     // called. In order to be able to dump a container the class has to be a
     // ContainerBuilder.
     $container = empty($container) ? new ContainerBuilder() : $container;
-    module_invoke_all('container_boot', $container);
+    module_invoke_all('inject_boot', $container);
   }
   else if ($phase == 'init') {
     // In the init phase, the container must be a ContainerBuilder. Operations
     // configuring this container is expected. This must not be called if a
     // container has not be previously set.
     $container = empty($container) ? drupal_container() : $container;
-    module_invoke_all('container_init', $container);
+    module_invoke_all('inject_init', $container);
   }
   else if ($phase == 'runtime') {
     // Re-building a container at runtime is an edge case but is useful when the
     // configuration has changed and the compiler need to be re-dumped. This
     // will trigger a full rebuild as well as a full re-configuration.
     $container = empty($container) ? new ContainerBuilder() : $container;
-    module_invoke_all('container_boot', $container);
-    module_invoke_all('container_init', $container);
+    module_invoke_all('inject_boot', $container);
+    module_invoke_all('inject_init', $container);
   }
 
   // By-pass the db_merge request.

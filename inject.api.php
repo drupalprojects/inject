@@ -20,7 +20,7 @@ use Symfony\Component\DependencyInjection\Loader\XmlFileLoader;
  * This hook is triggered at the end of the boot process, just before hook_init
  * is about to start.
  *
- * Because this hook can is triggered in a bootstrap session, it is recommanded
+ * Because this hook can is triggered in a bootstrap session, it is recommended
  * to dump the configuration on disk. Building the container through this hook
  * is a very expensive operation and can take down your web-site if used in
  * production.
@@ -28,7 +28,7 @@ use Symfony\Component\DependencyInjection\Loader\XmlFileLoader;
  * @param ContainerBuilder $container
  *   The container builder object.
  */
-function hook_container_boot(ContainerBuilder $container) {
+function hook_inject_boot(ContainerBuilder $container) {
   $container->setParameter('mailer.transport', 'sendmail');
   $container->register('mailer', 'Mailer')
     ->addArgument('%mailer.transport%');
@@ -45,7 +45,7 @@ function hook_container_boot(ContainerBuilder $container) {
  * @param ContainerBuilder $container
  *   The container builder object.
  */
-function hook_container_init(ContainerBuilder $container) {
+function hook_inject_init(ContainerBuilder $container) {
   $loader = new XmlFileLoader(
     $container,
     new FileLocator(__DIR__.'/../config')
