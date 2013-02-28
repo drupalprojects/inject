@@ -26,7 +26,7 @@ use Symfony\Component\DependencyInjection\Reference;
  * @param ContainerBuilder $container
  *   The container builder object.
  */
-function hook_container(ContainerBuilder $container) {
+function hook_container_build(ContainerBuilder $container) {
   $container->setParameter('mailer.transport', 'sendmail');
   $container->register('mailer', 'Mailer')
     ->addArgument('%mailer.transport%');

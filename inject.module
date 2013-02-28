@@ -88,7 +88,7 @@ function inject_needs_dumping() {
 function inject_rebuild() {
   // Configures the dependency injection container.
   drupal_container($container = new ContainerBuilder());
-  module_invoke_all('container', $container);
+  module_invoke_all('container_build', $container);
   inject_needs_dumping();
 }
 
