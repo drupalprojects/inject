@@ -88,11 +88,6 @@ function inject_requirements($phase) {
  */
 function inject_install() {
   db_update('system')
-    ->fields(array('weight' => -1000))
-    ->condition('type', 'module')
-    ->condition('name', 'classloader')
-    ->execute();
-  db_update('system')
     ->fields(array('weight' => 1000))
     ->condition('type', 'module')
     ->condition('name', 'inject')
@@ -111,34 +106,4 @@ function inject_uninstall() {
   drupal_load('module', 'inject');
   drupal_unlink(inject_file());
   drupal_rmdir(inject_folder());
-}
-
-/**
- * Updates module weight.
- */
-function inject_update_7000() {
-  db_update('system')
-    ->fields(array('weight' => -1000))
-    ->condition('type', 'module')
-    ->condition('name', 'classloader')
-    ->execute();
-  db_update('system')
-    ->fields(array('weight' => 1000))
-    ->condition('type', 'module')
-    ->condition('name', 'inject')
-    ->execute();
-
-  $file = conf_path() . '/files/cache/container.php';
-  mkdir(conf_path() . '/files/cache', 0300);
-  file_put_contents($file, "<?php\n");
-  chmod($file, 0300);
-}
-
-/**
- * Rebuild the container.
- */
-function inject_update_7001() {
-  drupal_rmdir(conf_path() . '/files/cache');
-  drupal_mkdir(conf_path() . '/files/inject', 0300);
-  inject_rebuild();
 }
