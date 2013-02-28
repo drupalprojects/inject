@@ -34,16 +34,30 @@ function inject_boot() {
  * Implements hook_form_system_performance_settings_alter().
  */
 function inject_form_system_performance_settings_alter(&$form, $form_state) {
+  drupal_add_js(drupal_get_path('module', 'inject') . '/inject.js');
+  // Add JS to enable / disable the 'Compile configuration' checkbox.
+  drupal_add_js('jQuery(function () { Drupal.enableCompileConfigurationCheckbox(); });', 'inline');
+
   $form['inject'] = array(
     '#type' => 'fieldset',
     '#title' => t('Dependency Injection Container'),
     '#description' => t('Dumping the configuration can enhance performances, by compiling, dumping and caching the resulting file to disk.')
   );
+
+  $file_exists = file_exists(inject_folder());
   $form['inject']['inject_dump'] = array(
     '#type' => 'checkbox',
-    '#title' => t('Dump the configuration'),
-    '#default_value' => variable_get('inject_dump', TRUE),
-    '#enabled' => file_exists(inject_folder()),
+    '#title' => t('Dump configuration to disk.'),
+    '#default_value' => variable_get('inject_dump', TRUE) && $file_exists,
+    '#disabled' => !$file_exists,
+  );
+
+  $dump_config = $form['inject']['inject_dump']['#default_value'];
+  $form['inject']['inject_compile'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Compile configuration.'),
+    '#default_value' => variable_get('inject_compile', FALSE) && $dump_config,
+    '#disabled' => !$dump_config
   );
 
   $form['#submit'][] = 'inject_form_system_performance_settings_submit';
@@ -92,6 +106,11 @@ function inject_exit() {
   // If the container needs to be dumped.
   if (variable_get('inject_needs_dumping', FALSE)) {
     $container = drupal_container();
+
+    if (variable_get('inject_compile', FALSE)) {
+      // If Compile configuration is checked, compiles the container.
+      $container->compile();
+    }
 
     $dumper = new PhpDumper($container);
     file_put_contents(
