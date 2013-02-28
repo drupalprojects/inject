@@ -84,6 +84,20 @@ function inject_form_system_performance_settings_submit($form, &$form_state) {
 }
 
 /**
+ * Implements hook_hook_info().
+ */
+function inject_hook_info() {
+  $hooks['inject_boot'] = array(
+    'group' => 'config',
+  );
+  $hooks['inject_init'] = array(
+    'group' => 'config',
+  );
+
+  return $hooks;
+}
+
+/**
  * Re-build the dependency injection container.
  *
  * @param string $phase
