@@ -6,3 +6,5 @@ php = 5.3.3
 weight = 1000
 
 dependencies[] = classloader
+
+version = 7.x-1.6

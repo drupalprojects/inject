@@ -7,6 +7,7 @@
 
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Reference;
+use Symfony\Component\DependencyInjection\Loader\XmlFileLoader;
 
 /**
  * @addtogroup hooks
@@ -14,25 +15,47 @@ use Symfony\Component\DependencyInjection\Reference;
  */
 
 /**
- * Configures the container.
+ * Configures the container after boot.
  *
  * This hook is triggered at the end of the boot process, just before hook_init
  * is about to start.
  *
- * Because this hook can be triggered in a bootstrap session, it is recommanded
- * to dump the configuration on disk. Building the container through hooks is a
- * very expensive operation and can take down your web-site if used in production.
+ * Because this hook can is triggered in a bootstrap session, it is recommanded
+ * to dump the configuration on disk. Building the container through this hook
+ * is a very expensive operation and can take down your web-site if used in
+ * production.
  *
  * @param ContainerBuilder $container
  *   The container builder object.
  */
-function hook_container_build(ContainerBuilder $container) {
+function hook_container_boot(ContainerBuilder $container) {
   $container->setParameter('mailer.transport', 'sendmail');
   $container->register('mailer', 'Mailer')
     ->addArgument('%mailer.transport%');
 
   $container->register('newsletter_manager', 'NewletterManager')
     ->addArgument(new Reference('mailer'));
+}
+
+/**
+ * Configures the container after init.
+ *
+ * This hook is triggered at the end of the init process.
+ *
+ * @param ContainerBuilder $container
+ *   The container builder object.
+ */
+function hook_container_init(ContainerBuilder $container) {
+  $loader = new XmlFileLoader(
+    $container,
+    new FileLocator(__DIR__.'/../config')
+  );
+
+  $loader->load('services.xml');
+
+  if ($config['advanced']) {
+    $loader->load('advanced.xml');
+  }
 }
 
 /**

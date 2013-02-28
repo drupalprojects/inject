@@ -17,13 +17,13 @@ function inject_requirements($phase) {
   $t = get_t();
 
   if ($phase != 'install' && variable_get('inject_dump', TRUE)) {
-    $cache_path = conf_path() . '/files/inject';
-    $container_file = $cache_path . '/container.php';
+    $cache_path = inject_folder();
+    $container_file = inject_file();
     $exists = FALSE;
 
     // Verify that the directory exists.
     if (drupal_verify_install_file($cache_path, FILE_EXIST, 'dir')) {
-      // Check if a container.php file already exists.
+      // Check if a container file already exists.
       $file = $container_file;
       if (drupal_verify_install_file($container_file, FILE_EXIST)) {
         // If it does, make sure it is writable and executable.
@@ -33,7 +33,7 @@ function inject_requirements($phase) {
       }
     }
 
-    // If container.php file does not exist, throw an error.
+    // If container file does not exist, throw an error.
     if (!$exists) {
       $requirements['container file exists'] = array(
         'title'       => $t('Container file'),
@@ -47,7 +47,7 @@ function inject_requirements($phase) {
         'title'       => $t('Container file'),
         'value'       => $t('The %file file exists.', array('%file' => $file)),
       );
-      // If container.php is not writable, throw an error.
+      // If container file is not writable, throw an error.
       if (!$writable) {
         $requirements['container file writable'] = array(
           'title'       => $t('Container file'),
@@ -62,7 +62,7 @@ function inject_requirements($phase) {
           'value'       => $t('The container file is writable.'),
         );
       }
-      // If container.php is not executable, throw an error.
+      // If container file is not executable, throw an error.
       if (!$executable) {
         $requirements['container file executable'] = array(
           'title'       => $t('Container file'),
@@ -98,24 +98,19 @@ function inject_install() {
     ->condition('name', 'inject')
     ->execute();
 
-  drupal_mkdir(conf_path() . '/files/inject', 0300);
-
-  // Dumps an empty container.
-  inject_register();
-  $dumper = new PhpDumper(new ContainerBuilder());
-  file_put_contents(
-    inject_file(),
-    $dumper->dump(array('class' => 'CachedContainer'))
-  );
+  drupal_mkdir(inject_folder(), 0300);
 }
 
 /**
  * Implements hook_uninstall().
  */
 function inject_uninstall() {
-  drupal_unlink(conf_path() . '/files/inject/container.php');
-  drupal_rmdir(conf_path() . '/files/inject');
   variable_del('inject_dump');
+  variable_del('inject_compile');
+  // Need to load the .module file as it is not available in uninstall process.
+  drupal_load('module', 'inject');
+  drupal_unlink(inject_file());
+  drupal_rmdir(inject_folder());
 }
 
 /**
