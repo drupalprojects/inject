@@ -65,7 +65,7 @@ function inject_form_system_performance_settings_submit($form, &$form_state) {
 function inject_needs_dumping() {
   global $conf;
   // By-pass the db_merge request.
-  $conf['inject_needs_dumping'] = variable_get('inject_dump', FALSE);
+  $conf['inject_needs_dumping'] = variable_get('inject_dump', TRUE);
 }
 
 /**
