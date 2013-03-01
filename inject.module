@@ -21,7 +21,7 @@ function inject_boot() {
     // This is the last module (weight=1000) to be booted, load the cached
     // version of the container in order to allow hook_init() to alleviate
     // dependency injection.
-    $class = inject_classname();
+    $class = inject_class();
     $cache_file = $class . '.php';
 
     // First, try to load.
@@ -61,8 +61,19 @@ function inject_storage() {
  * @return string
  *   The class name.
  */
-function inject_classname() {
-  return variable_get('inject_classname', 'ServiceContainer');
+function inject_class() {
+  return variable_get('inject_class', 'ServiceContainer');
+}
+
+/**
+ * Gets the container's base class.
+ *
+ * All names except Container must be fully qualified.
+ *
+ * @return string
+ */
+function inject_base_class() {
+  return variable_get('inject_base_class', 'Container');
 }
 
 /**
@@ -184,8 +195,8 @@ function inject_exit() {
 
     // Cache the container.
     $dumper = new PhpDumper($container);
-    $class = inject_classname();
-    $content = $dumper->dump(array('class' => $class));
+    $class = inject_class();
+    $content = $dumper->dump(array('class' => $class, 'base_class' => inject_base_class()));
     inject_storage()->save($class . '.php', $content);
   }
 }

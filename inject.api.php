@@ -21,9 +21,7 @@ use Symfony\Component\DependencyInjection\Loader\XmlFileLoader;
  * is about to start.
  *
  * Because this hook can is triggered in a bootstrap session, it is recommended
- * to dump the configuration on disk. Building the container through this hook
- * is a very expensive operation and can take down your web-site if used in
- * production.
+ * to dump the configuration on disk to avoid calling it on each page request.
  *
  * @param ContainerBuilder $container
  *   The container builder object.
@@ -40,7 +38,8 @@ function hook_inject_boot(ContainerBuilder $container) {
 /**
  * Configures the container after init.
  *
- * This hook is triggered at the end of the init process.
+ * This hook is triggered at the end of the init process, it is recommended to
+ * dump the configuration on disk to avoid calling it on each page request.
  *
  * @param ContainerBuilder $container
  *   The container builder object.
