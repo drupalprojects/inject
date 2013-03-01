@@ -5,6 +5,8 @@
  * Enables Symfony's Dependency Injection Component.
  */
 
+use Drupal\Component\PhpStorage\PhpStorageFactory;
+
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\DependencyInjection\Dumper\PhpDumper;
@@ -19,8 +21,18 @@ function inject_boot() {
     // This is the last module (weight=1000) to be booted, load the cached
     // version of the container in order to allow hook_init() to alleviate
     // dependency injection.
-    require_once inject_file();
-    drupal_container(new CachedContainer());
+    $class = inject_classname();
+    $cache_file = $class . '.php';
+
+    // First, try to load.
+    if (!class_exists($class, FALSE)) {
+      inject_storage()->load($cache_file);
+    }
+    // If the load succeedded or the class already existed, use it.
+    if (class_exists($class, FALSE)) {
+      $fully_qualified_class_name = '\\' . $class;
+      drupal_container(new $fully_qualified_class_name);
+    }
   }
   else {
     // The cached version of the container does not exist, trigger a rebuild.
@@ -28,6 +40,29 @@ function inject_boot() {
     // production sites.
     inject_rebuild('boot');
   }
+}
+
+/**
+ * Gets the PHP code storage object to use for the compiled container.
+ *
+ * @return \Drupal\Component\PhpStorage\PhpStorageInterface
+ */
+function inject_storage() {
+  static $storage;
+  if (!isset($storage)) {
+    $storage = PhpStorageFactory::get('service_container');
+  }
+  return $storage;
+}
+
+/**
+ * Returns the classname based on environment, debug and testing prefix.
+ *
+ * @return string
+ *   The class name.
+ */
+function inject_classname() {
+  return variable_get('inject_classname', 'ServiceContainer');
 }
 
 /**
@@ -54,12 +89,12 @@ function inject_form_system_performance_settings_alter(&$form, $form_state) {
     '#description' => t('Dumping the configuration can enhance performances, by compiling, dumping and caching the resulting file to disk.')
   );
 
-  $file_exists = file_exists(inject_folder());
+  $writeable = inject_storage()->writeable();
   $form['inject']['inject_dump'] = array(
     '#type' => 'checkbox',
     '#title' => t('Dump configuration to disk.'),
-    '#default_value' => variable_get('inject_dump', TRUE) && $file_exists,
-    '#disabled' => !$file_exists,
+    '#default_value' => variable_get('inject_dump', TRUE) && $writeable,
+    '#disabled' => !$writeable,
   );
 
   $dump_config = $form['inject']['inject_dump']['#default_value'];
@@ -130,19 +165,6 @@ function inject_rebuild($phase = 'runtime') {
 }
 
 /**
- * Returns the inject folder path.
- */
-function inject_folder() {
-  return variable_get('inject_folder', conf_path() . '/files/inject');
-}
-
-/**
- * Returns the inject file uri.
- */
-function inject_file() {
-  return inject_folder() . '/' . variable_get('inject_file', 'container.php');
-}
-/**
  * Implements hook_exit().
  */
 function inject_exit() {
@@ -155,11 +177,16 @@ function inject_exit() {
       $container->compile();
     }
 
+    if (!inject_storage()->writeable()) {
+      watchdog('inject', 'Container cannot be written to disk');
+      return;
+    }
+
+    // Cache the container.
     $dumper = new PhpDumper($container);
-    file_put_contents(
-      inject_file(),
-      $dumper->dump(array('class' => 'CachedContainer'))
-    );
+    $class = inject_classname();
+    $content = $dumper->dump(array('class' => $class));
+    inject_storage()->save($class . '.php', $content);
   }
 }
 
@@ -181,7 +208,9 @@ function inject_flush_caches() {
  */
 function inject_register() {
   // Activates the class loader.
-  drupal_classloader()->registerNamespace('Symfony\Component\DependencyInjection', __DIR__ . '/vendor/symfony/dependency-injection');
+  $loader = drupal_classloader();
+  $loader->registerNamespace('Drupal\Component\PhpStorage', __DIR__ . '/lib');
+  $loader->registerNamespace('Symfony\Component\DependencyInjection', __DIR__ . '/vendor/symfony/dependency-injection');
 }
 
 /**
