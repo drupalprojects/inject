@@ -22,4 +22,6 @@ function inject_install() {
 function inject_uninstall() {
   variable_del('inject_dump');
   variable_del('inject_compile');
+  variable_del('inject_class');
+  variable_del('inject_base_class');
 }
