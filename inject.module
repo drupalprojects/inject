@@ -26,7 +26,7 @@ function inject_boot() {
     // The cached version of the container does not exist, trigger a rebuild.
     // Note: this operation is expensive and configuration should be dumped in
     // production sites.
-    inject_rebuild('boot', new ContainerBuilder());
+    inject_rebuild('boot');
   }
 }
 
@@ -35,7 +35,7 @@ function inject_boot() {
  */
 function inject_init() {
   if (!variable_get('inject_dump', TRUE)) {
-    // Re-build a second time the container in a non-bootstrap context.
+    // Re-use the container in a non-bootstrap context.
     inject_rebuild('init');
   }
 }
@@ -102,38 +102,31 @@ function inject_hook_info() {
  *
  * @param string $phase
  *   (Optional) The phase container is rebuilt.
- * @param ContainerInterface $container
- *   (Optional) The container to re-build.
  */
-function inject_rebuild($phase = 'runtime', ContainerInterface $container = NULL) {
+function inject_rebuild($phase = 'runtime') {
   if ($phase == 'boot') {
     // In the bootstrap phase, either a cached container is loaded from dumped
     // file, either a new container is created; In which case inject_rebuild is
     // called. In order to be able to dump a container the class has to be a
     // ContainerBuilder.
-    $container = empty($container) ? new ContainerBuilder() : $container;
-    module_invoke_all('inject_boot', $container);
+    module_invoke_all('inject_boot', drupal_container(new ContainerBuilder()));
   }
   else if ($phase == 'init') {
     // In the init phase, the container must be a ContainerBuilder. Operations
     // configuring this container is expected. This must not be called if a
     // container has not be previously set.
-    $container = empty($container) ? drupal_container() : $container;
-    module_invoke_all('inject_init', $container);
+    module_invoke_all('inject_init', drupal_container());
   }
   else if ($phase == 'runtime') {
     // Re-building a container at runtime is an edge case but is useful when the
-    // configuration has changed and the compiler need to be re-dumped. This
+    // configuration has changed and the compiler need to be re-configured. This
     // will trigger a full rebuild as well as a full re-configuration.
-    $container = empty($container) ? new ContainerBuilder() : $container;
-    module_invoke_all('inject_boot', $container);
-    module_invoke_all('inject_init', $container);
+    module_invoke_all('inject_boot', drupal_container(new ContainerBuilder()));
+    module_invoke_all('inject_init', drupal_container());
   }
 
   // By-pass the db_merge request.
   $GLOBALS['conf']['inject_needs_dumping'] = variable_get('inject_dump', TRUE);
-  // Re-set the container.
-  drupal_container($container);
 }
 
 /**
