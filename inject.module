@@ -134,10 +134,10 @@ function inject_form_system_performance_settings_submit($form, &$form_state) {
  */
 function inject_hook_info() {
   $hooks['inject_boot'] = array(
-    'group' => 'config',
+    'group' => 'inject',
   );
   $hooks['inject_init'] = array(
-    'group' => 'config',
+    'group' => 'inject',
   );
 
   return $hooks;
