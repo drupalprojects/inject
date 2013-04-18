@@ -206,7 +206,7 @@ function inject_exit() {
  */
 function inject_flush_caches() {
   // In some context such as module activation, the boot method is not called so
-  // the component is never registered with the class-loader. This cause
+  // the component is never registered with the class loader. This cause
   // troubles as we need the class definition when re-building the container.
   inject_register();
   // Re-build can now safely be called.
@@ -215,7 +215,7 @@ function inject_flush_caches() {
 }
 
 /**
- * Registers the Dependency Injection name-space with the class-loader.
+ * Registers the Dependency Injection name-space with the class loader.
  */
 function inject_register() {
   // Activates the class loader.
