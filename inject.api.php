@@ -20,7 +20,7 @@ use Symfony\Component\DependencyInjection\Loader\XmlFileLoader;
  * This hook is triggered at the end of the boot process, just before hook_init
  * is about to start.
  *
- * Because this hook can is triggered in a bootstrap session, it is recommended
+ * Because this hook can be triggered in a bootstrap session, it is recommended
  * to dump the configuration on disk to avoid calling it on each page request.
  *
  * @param ContainerBuilder $container

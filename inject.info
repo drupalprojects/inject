@@ -1,6 +1,7 @@
 name = Dependency Injection
-description = Enables Symfony's Dependency Injection Component.
+description = Integrates Symfony's Dependency Injection Component.
 core = 7.x
+package = Symfony
 php = 5.3.3
 ; Load this module after everything.
 weight = 1000

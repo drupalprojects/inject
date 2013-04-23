@@ -2,7 +2,7 @@
 
 /**
  * @file
- * Enables Symfony's Dependency Injection Component.
+ * Integrates Symfony's Dependency Injection Component.
  */
 
 use Drupal\Component\PhpStorage\PhpStorageFactory;
@@ -28,24 +28,23 @@ function inject_boot() {
     if (!class_exists($class, FALSE)) {
       inject_storage()->load($cache_file);
     }
-    // If the load succeedded or the class already existed, use it.
+    // If the load succeeded or the class already existed, use it.
     if (class_exists($class, FALSE)) {
-      $fully_qualified_class_name = '\\' . $class;
-      drupal_container(new $fully_qualified_class_name);
+      drupal_container(new $class);
+      return;
     }
   }
-  else {
-    // The cached version of the container does not exist, trigger a rebuild.
-    // Note: this operation is expensive and configuration should be dumped in
-    // production sites.
-    inject_rebuild('boot');
-  }
+
+  // The cached version of the container does not exist, trigger a rebuild.
+  // Note: this operation is expensive and configuration should be dumped in
+  // production sites.
+  inject_rebuild('boot');
 }
 
 /**
  * Gets the PHP code storage object to use for the compiled container.
  *
- * @return \Drupal\Component\PhpStorage\PhpStorageInterface
+ * @return Drupal\Component\PhpStorage\PhpStorageInterface
  */
 function inject_storage() {
   static $storage;
@@ -56,7 +55,7 @@ function inject_storage() {
 }
 
 /**
- * Returns the classname based on environment, debug and testing prefix.
+ * Returns the class name based on environment, debug and testing prefix.
  *
  * @return string
  *   The class name.
@@ -80,7 +79,10 @@ function inject_base_class() {
  * Implements hook_init().
  */
 function inject_init() {
-  if (!variable_get('inject_dump', TRUE)) {
+  // If somewhere in the init process the container needs to be dumped, it
+  // generally means the loading of the cached class failed or an operation
+  // asking for a full rebuild has been submitted.
+  if (variable_get('inject_needs_dumping', FALSE)) {
     // Re-use the container in a non-bootstrap context.
     inject_rebuild('init');
   }
@@ -194,8 +196,8 @@ function inject_exit() {
     }
 
     // Cache the container.
-    $dumper = new PhpDumper($container);
     $class = inject_class();
+    $dumper = new PhpDumper($container);
     $content = $dumper->dump(array('class' => $class, 'base_class' => inject_base_class()));
     inject_storage()->save($class . '.php', $content);
   }
