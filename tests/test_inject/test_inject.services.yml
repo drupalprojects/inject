@@ -1,5 +1,5 @@
 parameters:
-  dummy.param: dummy
+  dummy.param: wrong
 
 services:
   dummy:
