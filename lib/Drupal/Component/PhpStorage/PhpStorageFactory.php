@@ -31,7 +31,7 @@ class PhpStorageFactory {
    *   An instantiated storage controller for the specified name.
    */
   static function get($name) {
-    global $conf;
+    global $conf, $drupal_hash_salt, $databases;
     if (isset($conf['php_storage'][$name])) {
       $configuration = $conf['php_storage'][$name];
     }
@@ -41,7 +41,7 @@ class PhpStorageFactory {
     else {
       $configuration = array(
         'class' => 'Drupal\Component\PhpStorage\MTimeProtectedFileStorage',
-        'secret' => drupal_get_hash_salt(),
+        'secret' => empty($drupal_hash_salt) ? hash('sha256', serialize($databases)) : $drupal_hash_salt,
       );
     }
     $class = isset($configuration['class']) ? $configuration['class'] : 'Drupal\Component\PhpStorage\MTimeProtectedFileStorage';
