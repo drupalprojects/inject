@@ -6,13 +6,16 @@
  */
 
 use Drupal\Component\PhpStorage\PhpStorageFactory;
+use Drupal\Core\DependencyInjection\YamlFileLoader;
 
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\DependencyInjection\Dumper\PhpDumper;
 
 /**
- * Implements hook_boot().
+ * @deprecated Implements hook_boot().
+ *
+ * Will be initialized at init level.
  */
 function inject_boot() {
   inject_register();
@@ -38,7 +41,7 @@ function inject_boot() {
   // The cached version of the container does not exist, trigger a rebuild.
   // Note: this operation is expensive and configuration should be dumped in
   // production sites.
-  inject_rebuild('boot');
+  inject_rebuild('boot'); // TODO: replace by inject_build() in 2.0 release.
 }
 
 /**
@@ -77,6 +80,8 @@ function inject_base_class() {
 
 /**
  * Implements hook_init().
+ *
+ * @TODO: move inject_boot here in 2.0 release.
  */
 function inject_init() {
   // If somewhere in the init process the container needs to be dumped, it
@@ -84,7 +89,8 @@ function inject_init() {
   // asking for a full rebuild has been submitted.
   if (variable_get('inject_needs_dumping', FALSE)) {
     // Re-use the container in a non-bootstrap context.
-    inject_rebuild('init');
+    inject_rebuild('init'); // @TODO: remove.
+    inject_build();
   }
 }
 
@@ -135,10 +141,15 @@ function inject_form_system_performance_settings_submit($form, &$form_state) {
  * Implements hook_hook_info().
  */
 function inject_hook_info() {
+  // @deprecated: use hook_inject_build() instead.
   $hooks['inject_boot'] = array(
     'group' => 'inject',
   );
+  // @deprecated: use hook_inject_build() instead.
   $hooks['inject_init'] = array(
+    'group' => 'inject',
+  );
+  $hooks['inject_build'] = array(
     'group' => 'inject',
   );
 
@@ -146,7 +157,9 @@ function inject_hook_info() {
 }
 
 /**
- * Re-build the dependency injection container.
+ * @deprecated Re-build the dependency injection container.
+ *
+ * This function will be replaced by inject_build() in the 2.0 release.
  *
  * @param string $phase
  *   (Optional) The phase container is rebuilt.
@@ -174,7 +187,39 @@ function inject_rebuild($phase = 'runtime') {
   }
 
   // By-pass the db_merge request.
-  $GLOBALS['conf']['inject_needs_dumping'] = variable_get('inject_dump', TRUE);
+  $GLOBALS['conf']['inject_needs_dumping'] = TRUE;
+}
+
+/**
+ * Build the dependency injection container.
+ */
+function inject_build() {
+  // In the bootstrap phase, either a cached container is loaded from dumped
+  // file, either a new container is created; In which case inject_build is
+  // called. In order to be able to dump a container the class has to be a
+  // ContainerBuilder.
+  $container = drupal_container(/* new ContainerBuilder() */);
+  $yaml_loader = new YamlFileLoader($container);
+
+  // Load each module services description file.
+  foreach (module_list() as $name) {
+    $filename = drupal_get_path('module', $name) . "/$name.services.yml";
+    if (file_exists($filename)) {
+      $yaml_loader->load($filename);
+    }
+  }
+
+  // Build the container through PHP code, operations such as redefining
+  // services or adding dynamic properties and services are expected.
+  module_invoke_all('inject_build', $container);
+
+  if (variable_get('inject_compile', FALSE)) {
+    // If Compile configuration is checked, compiles the container.
+    $container->compile();
+  }
+
+  // By-pass the db_merge request.
+  $GLOBALS['conf']['inject_needs_dumping'] = TRUE;
 }
 
 /**
@@ -182,13 +227,8 @@ function inject_rebuild($phase = 'runtime') {
  */
 function inject_exit() {
   // If the container needs to be dumped.
-  if (variable_get('inject_needs_dumping', FALSE)) {
+  if (variable_get('inject_dump', TRUE) && variable_get('inject_needs_dumping', FALSE)) {
     $container = drupal_container();
-
-    if (variable_get('inject_compile', FALSE)) {
-      // If Compile configuration is checked, compiles the container.
-      $container->compile();
-    }
 
     if (!inject_storage()->writeable()) {
       watchdog('inject', 'Container cannot be written to disk');
@@ -213,6 +253,7 @@ function inject_flush_caches() {
   inject_register();
   // Re-build can now safely be called.
   inject_rebuild();
+  inject_build();
   return array();
 }
 
@@ -223,7 +264,9 @@ function inject_register() {
   // Activates the class loader.
   $loader = drupal_classloader();
   $loader->registerNamespace('Drupal\Component\PhpStorage', __DIR__ . '/lib');
+  $loader->registerNamespace('Drupal\Core\DependencyInjection', __DIR__ . '/lib');
   $loader->registerNamespace('Symfony\Component\DependencyInjection', __DIR__ . '/vendor/symfony/dependency-injection');
+  $loader->registerNamespace('Symfony\Component\Yaml', __DIR__ . '/vendor/symfony/yaml');
 }
 
 /**
