@@ -849,7 +849,7 @@ EOF;
     private function addAliases()
     {
         if (!$aliases = $this->container->getAliases()) {
-            return '';
+            return "        \$this->aliases = array();\n";
         }
 
         $code = "        \$this->aliases = array(\n";
