@@ -206,7 +206,9 @@ function inject_register() {
   $loader = drupal_classloader();
   $loader->registerNamespace('Drupal\Component\PhpStorage', __DIR__ . '/lib');
   $loader->registerNamespace('Drupal\Core\DependencyInjection', __DIR__ . '/lib');
+  $loader->registerNamespace('Symfony\Component\Config', __DIR__ . '/vendor/symfony/config');
   $loader->registerNamespace('Symfony\Component\DependencyInjection', __DIR__ . '/vendor/symfony/dependency-injection');
+  $loader->registerNamespace('Symfony\Component\Filesystem', __DIR__ . '/vendor/symfony/filesystem');
   $loader->registerNamespace('Symfony\Component\Yaml', __DIR__ . '/vendor/symfony/yaml');
 }
 
