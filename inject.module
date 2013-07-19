@@ -48,8 +48,6 @@ function inject_base_class() {
 
 /**
  * Implements hook_init().
- *
- * @TODO: move inject_boot here in 2.0 release.
  */
 function inject_init() {
   inject_register();
