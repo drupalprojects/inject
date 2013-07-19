@@ -10,5 +10,4 @@
  */
 function test_inject_init() {
   drupal_classloader()->registerNamespace('Inject\Test', __DIR__ . '/lib');
-  debug('test_inject_init');
 }
