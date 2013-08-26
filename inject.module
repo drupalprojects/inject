@@ -53,7 +53,7 @@ function inject_init() {
   inject_register();
 
   if (variable_get('inject_dump', TRUE)) {
-    // This is the last module (weight=1000) to be booted, load the cached
+    // This is the second module (weight=-999) to be initiated, load the cached
     // version of the container in order to allow hook_init() to alleviate
     // dependency injection.
     $class = inject_class();
@@ -74,6 +74,20 @@ function inject_init() {
   // Note: this operation is expensive and configuration should be dumped in
   // production sites.
   inject_build();
+}
+
+/**
+ * Implements hook_modules_enabled().
+ */
+function inject_modules_enabled(array $modules) {
+  inject_flush_caches();
+}
+
+/**
+ * Implements hook_modules_installed().
+ */
+function inject_modules_installed(array $modules) {
+  inject_flush_caches();
 }
 
 /**
