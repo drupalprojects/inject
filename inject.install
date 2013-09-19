@@ -10,7 +10,7 @@
  */
 function inject_install() {
   db_update('system')
-    ->fields(array('weight' => -999))
+    ->fields(array('weight' => -500))
     ->condition('type', 'module')
     ->condition('name', 'inject')
     ->execute();
@@ -47,11 +47,12 @@ function inject_requirements($phase) {
 }
 
 /**
- * Updates the module's weight to -999.
+ * Updates the module's weight to -500 to let a chance boot modules to hook
+ * between classloader (-1000) and injection (-500).
  */
-function inject_update_7000() {
+function inject_update_7001() {
   db_update('system')
-    ->fields(array('weight' => -999))
+    ->fields(array('weight' => -500))
     ->condition('type', 'module')
     ->condition('name', 'inject')
     ->execute();

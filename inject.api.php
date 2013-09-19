@@ -23,8 +23,10 @@ use Symfony\Component\DependencyInjection\Loader\XmlFileLoader;
  * compilation passes,services, other extensions, ...
  *
  * @param ContainerBuilder $container
+ * @param string $phase
+ *   The phase when the container is being built, either 'boot' or 'init'.
  */
-function hook_inject_build(ContainerBuilder $container) {
+function hook_inject_build(ContainerBuilder $container, $phase) {
   $loader = new XmlFileLoader(
     $container,
     new FileLocator(__DIR__.'/../config')

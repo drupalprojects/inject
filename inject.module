@@ -47,14 +47,15 @@ function inject_base_class() {
 }
 
 /**
- * Implements hook_init().
+ * Implements hook_boot().
  */
-function inject_init() {
+function inject_boot() {
   inject_register();
 
+  // Only load the dumped container if the option is set.
   if (variable_get('inject_dump', TRUE)) {
-    // This is the second module (weight=-999) to be initiated, load the cached
-    // version of the container in order to allow hook_init() to alleviate
+    // This is the second module (weight=-999) to be booted, load the cached
+    // version of the container in order to allow hook_boot() to alleviate
     // dependency injection.
     $class = inject_class();
     $cache_file = $class . '.php';
@@ -73,7 +74,21 @@ function inject_init() {
   // The cached version of the container does not exist, trigger a rebuild.
   // Note: this operation is expensive and configuration should be dumped in
   // production sites.
-  inject_build();
+  inject_build(module_list(TRUE, TRUE), new ContainerBuilder(), 'boot');
+}
+
+/**
+ * Implements hook_init().
+ */
+function inject_init() {
+  // Continue the process of registering services at hook_init level if we are
+  // in the building phase, e.g. if the container is a container builder object.
+  if (drupal_container() instanceof ContainerBuilder) {
+    // Fully re-build the container through the whole module list. This is super
+    // important because in a bootstrap context, some services needs to exists
+    // but may not be fully configured yet.
+    inject_build(module_list(), drupal_container());
+  }
 }
 
 /**
@@ -146,32 +161,52 @@ function inject_hook_info() {
 
 /**
  * Build the dependency injection container.
+ *
+ * @param array $modules
+ *   The list of modules to register services in the container.
+ * @param Symfony\Component\DependencyInjection\ContainerBuilder $container
+ *   The container builder.
+ * @param string $phase
+ *   The phase in which the container is being build.
  */
-function inject_build() {
+function inject_build($modules, ContainerBuilder $container, $phase = 'init') {
   // In the bootstrap phase, either a cached container is loaded from dumped
   // file, either a new container is created; In which case inject_build is
   // called. In order to be able to dump a container the class has to be a
   // ContainerBuilder.
-  $container = drupal_container(new ContainerBuilder());
   $yaml_loader = new YamlFileLoader($container);
 
   // Load each module services description file.
-  foreach (module_list() as $name) {
-    $filename = drupal_get_path('module', $name) . "/$name.services.yml";
-    if (file_exists($filename)) {
-      $yaml_loader->load($filename);
+  foreach ($modules as $module) {
+    $filename = drupal_get_filename('module', $module);
+    // Since this function can be called in a bootstrap context, the use of API
+    // functions easing this task is not possible.
+    $services = dirname($filename) . "/$module.services.yml";
+    if (file_exists($services)) {
+      // Build the container through YML files, expecting simple or complex
+      // static service definitions, but not dynamic.
+      $yaml_loader->load($services);
     }
-  }
 
-  // Build the container through PHP code, operations such as redefining
-  // services or adding dynamic properties and services are expected.
-  module_invoke_all('inject_build', $container);
+    $filename = dirname($filename) . "/$module.inject.inc";
+    if (is_file($filename)) {
+      // In a bootstrap context, module_load_include can't be called too,
+      // requires the file before invoking hooks or the module_invoke will have
+      // no effects.
+      require_once $filename;
+    }
+    // Build the container through PHP code, operations such as redefining
+    // services or adding dynamic properties and services are expected.
+    module_invoke($module, 'inject_build', $container, $phase);
+  }
 
   if (variable_get('inject_compile', FALSE)) {
     // If Compile configuration is checked, compiles the container.
     $container->compile();
   }
 
+  // Set the container.
+  drupal_container($container);
   // By-pass the db_merge request.
   $GLOBALS['conf']['inject_needs_dumping'] = TRUE;
 }
@@ -206,7 +241,7 @@ function inject_flush_caches() {
   // troubles as we need the class definition when re-building the container.
   inject_register();
   // Re-build can now safely be called.
-  inject_build();
+  inject_build(module_list(), new ContainerBuilder());
   return array();
 }
 
@@ -238,7 +273,7 @@ function drupal_container(ContainerInterface $new_container = NULL) {
   // We do not use drupal_static() here because we do not have a mechanism by
   // which to reinitialize the stored objects, so a drupal_static_reset() call
   // would leave Drupal in a nonfunctional state.
-  static $container;
+  static $container = FALSE;
   if (isset($new_container)) {
     $container = $new_container;
   }
