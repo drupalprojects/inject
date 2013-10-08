@@ -57,3 +57,10 @@ function inject_update_7001() {
     ->condition('name', 'inject')
     ->execute();
 }
+
+/**
+ * Remove unused 'inject_needs_dumping' variable.
+ */
+function inject_update_7002() {
+  variable_del('inject_needs_dumping');
+}

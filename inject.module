@@ -144,6 +144,7 @@ function inject_form_system_performance_settings_alter(&$form, $form_state) {
 function inject_form_system_performance_settings_submit($form, &$form_state) {
   $form_dump = $form['inject']['inject_dump'];
   if ($form_dump['#default_value'] == 0 && $form_dump['#value'] == 1) {
+    // TODO: check this.
     $GLOBALS['conf']['inject_needs_dumping'] = TRUE;
   }
 }
@@ -167,9 +168,20 @@ function inject_hook_info() {
  * @param Symfony\Component\DependencyInjection\ContainerBuilder $container
  *   The container builder.
  * @param string $phase
- *   The phase in which the container is being build.
+ *   The phase in which the container is being build. Note: dump the container
+ *   when the phase 'init' is passed. This can be used in settings form where
+ *   admin can enter parameters which reconfigure the container without dumping.
  */
-function inject_build($modules, ContainerBuilder $container, $phase = 'init') {
+function inject_build($modules = NULL, ContainerBuilder $container = NULL, $phase = 'init') {
+
+  if (empty($modules)) {
+    $modules = module_list();
+  }
+
+  if (empty($container)) {
+    $container = new ContainerBuilder();
+  }
+
   // In the bootstrap phase, either a cached container is loaded from dumped
   // file, either a new container is created; In which case inject_build is
   // called. In order to be able to dump a container the class has to be a
@@ -207,29 +219,39 @@ function inject_build($modules, ContainerBuilder $container, $phase = 'init') {
 
   // Set the container.
   drupal_container($container);
-  // By-pass the db_merge request.
-  $GLOBALS['conf']['inject_needs_dumping'] = TRUE;
 }
 
 /**
  * Implements hook_exit().
  */
 function inject_exit() {
-  // If the container needs to be dumped.
-  if (variable_get('inject_dump', TRUE) && variable_get('inject_needs_dumping', FALSE)) {
-    $container = drupal_container();
-
-    if (!inject_storage()->writeable()) {
-      watchdog('inject', 'Container cannot be written to disk');
-      return;
+  // Dumps the container of registered services at hook_exit level if we are
+  // in the building phase, e.g. if the container is a container builder object.
+  if (drupal_container() instanceof ContainerBuilder) {
+    if (variable_get('inject_dump', TRUE)) {
+      // If the container needs to be dumped.
+      inject_dump(drupal_container());
     }
-
-    // Cache the container.
-    $class = inject_class();
-    $dumper = new PhpDumper($container);
-    $content = $dumper->dump(array('class' => $class, 'base_class' => inject_base_class()));
-    inject_storage()->save($class . '.php', $content);
   }
+}
+
+/**
+ * Dumps the container.
+ *
+ * @param Symfony\Component\DependencyInjection\ContainerBuilder $container
+ *   The container builder.
+ */
+function inject_dump(ContainerBuilder $container) {
+  if (!inject_storage()->writeable()) {
+    watchdog('inject', 'Container cannot be written to disk', WATCHDOG_ERROR);
+    return;
+  }
+
+  // Cache the container.
+  $class = inject_class();
+  $dumper = new PhpDumper($container);
+  $content = $dumper->dump(array('class' => $class, 'base_class' => inject_base_class()));
+  inject_storage()->save($class . '.php', $content);
 }
 
 /**
