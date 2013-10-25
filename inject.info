@@ -7,10 +7,3 @@ php = 5.3.3
 weight = -500
 
 dependencies[] = classloader
-
-; Information added by drupal.org packaging script on 2013-08-26
-version = "7.x-2.0"
-core = "7.x"
-project = "dependencyinjection"
-datestamp = "1377503791"
-
