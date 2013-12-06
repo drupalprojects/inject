@@ -5,5 +5,4 @@ vendor/*/*/*/*/*/Tests
 vendor/*/*/*/*/*/phpunit.xml.dist
 .buildpath
 .project
-composer.json
 composer.lock
