@@ -52,9 +52,11 @@ function inject_base_class() {
 function inject_boot() {
   inject_register();
 
-  // Only load the dumped container if the option is set.
-  if (variable_get('inject_dump', TRUE)) {
-    // This is the second module (weight=-999) to be booted, load the cached
+  // Only load the dumped container if the option is set. When the variable is
+  // not yet set, if the bootstrap happens in a testing context, do not load the
+  // previously created container.
+  if (variable_get('inject_dump', ! (bool) drupal_valid_test_ua())) {
+    // This is the second module (weight=-500) to be booted, load the cached
     // version of the container in order to allow hook_boot() to alleviate
     // dependency injection.
     $class = inject_class();
@@ -134,19 +136,6 @@ function inject_form_system_performance_settings_alter(&$form, $form_state) {
     '#default_value' => variable_get('inject_compile', FALSE) && $dump_config,
     '#disabled' => !$dump_config
   );
-
-  $form['#submit'][] = 'inject_form_system_performance_settings_submit';
-}
-
-/**
- * Submits inject_form_system_performance_settings_alter() form.
- */
-function inject_form_system_performance_settings_submit($form, &$form_state) {
-  $form_dump = $form['inject']['inject_dump'];
-  if ($form_dump['#default_value'] == 0 && $form_dump['#value'] == 1) {
-    // TODO: check this.
-    $GLOBALS['conf']['inject_needs_dumping'] = TRUE;
-  }
 }
 
 /**
@@ -228,7 +217,9 @@ function inject_exit() {
   // Dumps the container of registered services at hook_exit level if we are
   // in the building phase, e.g. if the container is a container builder object.
   if (drupal_container() instanceof ContainerBuilder) {
-    if (variable_get('inject_dump', TRUE)) {
+    // If the exit happens in a testing context, do not dump the container to
+    // disk so the version of components and services is not altered.
+    if (variable_get('inject_dump', ! (bool) drupal_valid_test_ua())) {
       // If the container needs to be dumped.
       inject_dump(drupal_container());
     }
